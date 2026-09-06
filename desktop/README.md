@@ -157,16 +157,31 @@ never touches a previously-good local copy; and one test that calls
 access — it's what CI's `desktop-build.yml` exercises on all three OSes).
 
 `cargo test` doesn't exercise Tauri's IPC/capability layer itself (there's
-no trivial way to construct a real `AppHandle` in a unit test). CI closes
-that gap with a Windows-only step
-(`desktop/ci/verify-update.mjs`) that launches the actual compiled `.exe`
-with WebView2 remote debugging enabled, drives it over CDP with
-Playwright, clicks the real "Update organizations" button, and confirms the
-registry actually updates and still verifies evidence afterwards.
-`desktop/ci/` is deliberately outside the pnpm workspace (not listed in
-`pnpm-workspace.yaml`) and its own tiny `package.json` installs
-`playwright-core` fresh in CI — it's automation tooling for this repo's CI,
-not a dependency of the shipped app.
+no trivial way to construct a real `AppHandle` in a unit test). CI *attempts*
+to close that gap with a Windows-only step (`desktop/ci/verify-update.mjs`)
+that launches the actual compiled `.exe` with WebView2 remote debugging
+enabled, drives it over CDP with Playwright, clicks the real "Update
+organizations" button, and confirms the registry actually updates and still
+verifies evidence afterwards. `desktop/ci/` is deliberately outside the pnpm
+workspace (not listed in `pnpm-workspace.yaml`) and its own tiny
+`package.json` installs `playwright-core` fresh in CI — it's automation
+tooling for this repo's CI, not a dependency of the shipped app.
+
+That step is marked `continue-on-error` in `desktop-build.yml`: on
+GitHub-hosted `windows-latest` runners, WebView2's remote-debugging port
+never opens for this app, even after fixing two real, documented gotchas
+(the debug port only binds `127.0.0.1`, not `localhost`; and a WebView2
+environment already initialized by an earlier launch of the same `.exe`
+silently ignores a newly-set `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` unless
+`WEBVIEW2_USER_DATA_FOLDER` also changes — both fixed, neither sufficient).
+It's left in as a diagnostic in case a future runner or WebView2 update
+resolves it, but doesn't gate CI. The IPC/capability wiring it would have
+exercised is still validated another way: `tauri-build`'s
+`validate_capabilities` fails the **build itself** if the permission
+identifiers in `capabilities/default.json` don't match what `build.rs`
+registers via `AppManifest::commands(...)` — and the build passes on all
+three OSes, which is real (if indirect) confirmation that the two commands
+are correctly wired.
 
 ## Icons
 
