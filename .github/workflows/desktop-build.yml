@@ -191,7 +191,7 @@ jobs:
           merge-multiple: true
 
       - name: List release assets
-        run: find dist -type f | sort
+        run: find dist -type f \( -iname '*.exe' -o -iname '*.msi' -o -iname '*.dmg' -o -iname '*.deb' -o -iname '*.rpm' -o -iname '*.appimage' -o -iname '*.sha256' \) | sort
 
       - uses: softprops/action-gh-release@v3
         with:
@@ -202,4 +202,26 @@ jobs:
           # than for a routine, pre-vetted release.
           draft: true
           generate_release_notes: true
-          files: dist/**/*
+          # Tauri's own bundle output directory isn't just the installers —
+          # it also contains the full unpacked staging tree each installer
+          # was built from (AppImage's AppDir, the .deb's root, etc.), which
+          # is riddled with same-named files (multiple copies of the same
+          # shared libraries, icons, "copyright" files...) across those
+          # staging trees. A bare `dist/**/*` picked up hundreds of them and
+          # broke on the resulting name collisions. Scope strictly to the
+          # actual installer formats (+ the .sha256 checksums generated
+          # above) — nothing else in the bundle directory is a real,
+          # user-facing release asset.
+          files: |
+            dist/**/*.exe
+            dist/**/*.exe.sha256
+            dist/**/*.msi
+            dist/**/*.msi.sha256
+            dist/**/*.dmg
+            dist/**/*.dmg.sha256
+            dist/**/*.deb
+            dist/**/*.deb.sha256
+            dist/**/*.rpm
+            dist/**/*.rpm.sha256
+            dist/**/*.AppImage
+            dist/**/*.AppImage.sha256
