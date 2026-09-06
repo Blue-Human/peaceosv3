@@ -11,3 +11,7 @@ examples/keys/*.key
 # Generated from the transparency/registry submodule by
 # web/scripts/build-embedded-registry.mjs on every dev/build/test run.
 web/src/embeddedRegistry.generated.ts
+
+# Rust build output and Tauri's generated capability schemas.
+desktop/src-tauri/target/
+desktop/src-tauri/gen/

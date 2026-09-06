@@ -9,9 +9,9 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "pnpm -r --if-present run build",
-    "test": "pnpm -r --if-present run test",
-    "typecheck": "pnpm -r --if-present run typecheck"
+    "build": "pnpm --filter @peaceos/spec --filter @peaceos/core --filter @peaceos/cli --filter @peaceos/examples --filter @peaceos/web --if-present run build",
+    "test": "pnpm --filter @peaceos/spec --filter @peaceos/core --filter @peaceos/cli --filter @peaceos/examples --filter @peaceos/web --if-present run test",
+    "typecheck": "pnpm --filter @peaceos/spec --filter @peaceos/core --filter @peaceos/cli --filter @peaceos/examples --filter @peaceos/web --if-present run typecheck"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",

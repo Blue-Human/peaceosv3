@@ -1,0 +1,100 @@
+name: Desktop build
+
+# Phase A validation: proves the Tauri desktop shell actually compiles and
+# starts on all three target OSes, using runners that already carry the
+# Rust + platform toolchains this repo's own dev machine may not have.
+#
+# Build-only, like web-build.yml: no code signing, no release publishing yet.
+# The SHA-256 + release-publishing step described in web/README.md's
+# distribution docs lands once Phase B is approved.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: Install Linux Tauri build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf build-essential curl wget file libssl-dev libgtk-3-dev xvfb
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build desktop app
+        run: pnpm --filter @peaceos/desktop run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.os }}
+          path: desktop/src-tauri/target/release/bundle
+
+      # "Debe arrancar... sin red": launches the raw compiled binary (not an
+      # installer) and confirms the process is still alive a few seconds
+      # later, i.e. it didn't crash on startup. This does not exercise the
+      # UI — see web-test.yml / web/test for the automated proof that the
+      # exact same web/dist this shell displays verifies valid.vep as
+      # AUTHENTIC using only the embedded registry, with zero network calls.
+      - name: Smoke-launch the desktop binary (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $proc = Start-Process -FilePath "desktop/src-tauri/target/release/peaceos-verify-desktop.exe" -PassThru
+          Start-Sleep -Seconds 5
+          if ($proc.HasExited) {
+            Write-Error "Desktop app exited early (code $($proc.ExitCode)) instead of staying open."
+            exit 1
+          }
+          Stop-Process -Id $proc.Id -Force
+
+      - name: Smoke-launch the desktop binary (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          ./desktop/src-tauri/target/release/peaceos-verify-desktop &
+          pid=$!
+          sleep 5
+          if ! kill -0 "$pid" 2>/dev/null; then
+            echo "Desktop app exited early instead of staying open." >&2
+            exit 1
+          fi
+          kill "$pid"
+
+      - name: Smoke-launch the desktop binary (Linux, headless via Xvfb)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          xvfb-run --auto-servernum ./desktop/src-tauri/target/release/peaceos-verify-desktop &
+          pid=$!
+          sleep 5
+          if ! kill -0 "$pid" 2>/dev/null; then
+            echo "Desktop app exited early instead of staying open." >&2
+            exit 1
+          fi
+          kill "$pid"

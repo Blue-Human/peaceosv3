@@ -1,0 +1,27 @@
+[package]
+name = "peaceos-verify-desktop"
+version = "0.1.0"
+description = "PeaceOS Verify desktop shell — wraps the Verify web portal for fully offline evidence verification."
+authors = ["Blue Human"]
+license = "Apache-2.0"
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "peaceos_verify_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.3", features = [] }
+
+[dependencies]
+# No serde/serde_json yet: Phase A defines zero custom Tauri commands (the
+# window just displays @peaceos/web's build as-is). They'll be added in
+# Phase B alongside the "update organizations" command's return type.
+tauri = { version = "2.11.5", features = [] }
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"

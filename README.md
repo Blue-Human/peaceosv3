@@ -28,6 +28,10 @@ for the full specification.
 spec/        VEP format spec + JSON Schema (source of truth)
 core/        TypeScript library: hashing, signing, timestamping, build + verify
 cli/         Node CLI wrapping core (create, check)
+web/         React + MUI Verify portal (browser)
+desktop/     Tauri shell around web/ for Windows/macOS/Linux — not in Phase 1's
+             original documented scope (see AGENTS.md); added on top of it,
+             reusing the same web/core verification code unchanged.
 examples/    sample .vep packages + test vectors (valid and tampered)
 docs/        user + developer docs
 ```
@@ -44,3 +48,11 @@ Requires Node 20+ and pnpm. `transparency/registry` is a git submodule
 pinned to a snapshot of the public organizations registry
 (`Blue-Human/peaceos_organizations`); the web portal embeds it at build
 time — see [`web/README.md`](./web/README.md) for details.
+
+`pnpm build` / `pnpm test` / `pnpm typecheck` cover `spec`, `core`, `cli`,
+`examples` and `web` only — plain Node/pnpm, no extra prerequisites.
+`desktop/` is deliberately excluded from those: it needs a Rust toolchain
+and a platform C toolchain (see [`desktop/README.md`](./desktop/README.md)),
+which most contributors won't have installed. Build/test it explicitly with
+`pnpm --filter @peaceos/desktop run build`, or via its own CI job
+(`.github/workflows/desktop-build.yml`).
