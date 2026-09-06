@@ -716,10 +716,33 @@ mod tests {
 
     // ---- the real thing: against the actual canonical registry (needs network) ----
 
+    /// GitHub Actions runners share IP ranges across countless unrelated
+    /// workflows, so an unauthenticated api.github.com call here can hit a
+    /// transient rate limit (HTTP 403) that has nothing to do with this
+    /// code. Retried here, in the test only — the production fetch path is
+    /// unchanged and still surfaces such an error immediately to the user,
+    /// who can just click "Update organizations" again.
+    fn download_registry_snapshot_with_retries() -> DownloadedSnapshot {
+        let mut last_err = None;
+        for attempt in 1..=3 {
+            match download_registry_snapshot() {
+                Ok(snapshot) => return snapshot,
+                Err(e) => {
+                    eprintln!("download_registry_snapshot attempt {attempt}/3 failed: {e}");
+                    last_err = Some(e);
+                    std::thread::sleep(std::time::Duration::from_secs(5 * attempt));
+                }
+            }
+        }
+        panic!(
+            "could not download the real registry after 3 attempts — is there network access? last error: {}",
+            last_err.unwrap()
+        );
+    }
+
     #[test]
     fn updates_from_the_real_canonical_registry() {
-        let (commit, date, keys, manifest_bytes) =
-            download_registry_snapshot().expect("could not download the real registry — is there network access?");
+        let (commit, date, keys, manifest_bytes) = download_registry_snapshot_with_retries();
         assert!(!commit.is_empty());
         assert!(!date.is_empty());
         assert!(!keys.is_empty());

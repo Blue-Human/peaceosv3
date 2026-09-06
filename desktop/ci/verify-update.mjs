@@ -10,7 +10,9 @@
 // Usage: node verify-update.mjs <path-to-exe> <path-to-valid.vep-dir>
 import { chromium } from 'playwright-core';
 import { spawn } from 'node:child_process';
-import { resolve } from 'node:path';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 
 const [, , exeArg, validVepArg] = process.argv;
 if (!exeArg || !validVepArg) {
@@ -21,33 +23,48 @@ const exePath = resolve(exeArg);
 const validVepDir = resolve(validVepArg);
 
 const CDP_PORT = 9333;
+const CDP_HOST = '127.0.0.1'; // WebView2 only opens the debug port on 127.0.0.1, not "localhost".
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function waitForCdp(url, tries = 40) {
+async function waitForCdp(url, tries = 90) {
+  let lastError;
   for (let i = 0; i < tries; i++) {
     try {
       const res = await fetch(`${url}/json/version`);
       if (res.ok) return;
-    } catch {
-      // not up yet
+      lastError = new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      lastError = err;
     }
-    await sleep(500);
+    await sleep(1000);
   }
-  throw new Error('CDP endpoint on the desktop app never became ready');
+  throw new Error(`CDP endpoint on the desktop app never became ready (last error: ${lastError})`);
 }
 
+// A fresh WEBVIEW2_USER_DATA_FOLDER is required: an earlier plain launch of
+// this same exe (the basic smoke-launch step) already created/initialized a
+// WebView2 environment for it under the default user data folder, and
+// WebView2 reuses that cached environment on subsequent launches — silently
+// ignoring a newly-set WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS if we don't
+// force a brand-new profile.
+const userDataFolder = mkdtempSync(join(tmpdir(), 'peaceos-verify-webview2-'));
+
 const child = spawn(exePath, [], {
-  env: { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}` },
+  env: {
+    ...process.env,
+    WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
+    WEBVIEW2_USER_DATA_FOLDER: userDataFolder,
+  },
   stdio: 'inherit',
 });
 
 let exitCode = 0;
 try {
-  await waitForCdp(`http://localhost:${CDP_PORT}`);
-  const browser = await chromium.connectOverCDP(`http://localhost:${CDP_PORT}`);
+  await waitForCdp(`http://${CDP_HOST}:${CDP_PORT}`);
+  const browser = await chromium.connectOverCDP(`http://${CDP_HOST}:${CDP_PORT}`);
   const context = browser.contexts()[0];
   const page = context.pages()[0] ?? (await context.newPage());
 
