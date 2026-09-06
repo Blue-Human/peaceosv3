@@ -1,7 +1,19 @@
 import type { CheckResult, VerifyReport } from '@peaceos/core';
 
+import type { EmbeddedRegistryVersion } from './embeddedTransparency.js';
 import type { Language } from './i18n.js';
 import { getTranslation } from './i18n.js';
+
+export function formatEmbeddedRegistryStatus(version: EmbeddedRegistryVersion, language: Language): string {
+  const date = version.date.slice(0, 10);
+  return getTranslation(language)
+    .embeddedRegistryStatus.replace('{date}', date)
+    .replace('{commit}', version.commit);
+}
+
+export function formatCustomRegistryStatus(fileCount: number, language: Language): string {
+  return getTranslation(language).customRegistryStatus.replace('{count}', String(fileCount));
+}
 
 export function getStatusLabel(check: CheckResult, language: Language): string {
   const { statusLabels } = getTranslation(language);

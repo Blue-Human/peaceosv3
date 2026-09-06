@@ -6,10 +6,12 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -p tsconfig.json && vite build",
-    "typecheck": "tsc -p tsconfig.json",
-    "preview": "vite preview"
+    "generate:registry": "node scripts/build-embedded-registry.mjs",
+    "dev": "node scripts/build-embedded-registry.mjs && vite",
+    "build": "node scripts/build-embedded-registry.mjs && tsc -p tsconfig.json && vite build",
+    "typecheck": "node scripts/build-embedded-registry.mjs && tsc -p tsconfig.json",
+    "preview": "vite preview",
+    "test": "node scripts/build-embedded-registry.mjs && vitest run"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

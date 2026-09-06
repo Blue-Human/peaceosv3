@@ -23,7 +23,12 @@ export interface Translation {
   packageDescription: string;
   transparencyTitle: string;
   transparencyDescription: string;
-  missingTransparencyWarning: string;
+  transparencyAdvancedToggleShow: string;
+  transparencyAdvancedToggleHide: string;
+  transparencyOverridesNote: string;
+  transparencyUseEmbeddedInstead: string;
+  embeddedRegistryStatus: string;
+  customRegistryStatus: string;
   verifyEvidence: string;
   selectFolder: string;
   selectFolderAriaPrefix: string;
@@ -99,9 +104,14 @@ const TRANSLATIONS: Record<Language, Translation> = {
     packageTitle: 'Evidencia a verificar (.vep)',
     packageDescription: 'La carpeta que contiene la evidencia y sus sellos.',
     transparencyTitle: 'Organizaciones de confianza',
-    transparencyDescription: 'Copia local del registro público para comprobar quién firma. Selecciona la carpeta completa.',
-    missingTransparencyWarning:
-      'Falta la carpeta de organizaciones de confianza. Sin ella no se puede comprobar quién firma la evidencia, y el resultado no será concluyente.',
+    transparencyDescription:
+      'Copia local del registro público para comprobar quién firma. Selecciona la carpeta completa.',
+    transparencyAdvancedToggleShow: 'Opción avanzada: cargar mi propia copia del registro',
+    transparencyAdvancedToggleHide: 'Ocultar opción avanzada',
+    transparencyOverridesNote: 'Tu copia sustituye al registro incorporado en esta verificación.',
+    transparencyUseEmbeddedInstead: 'Usar el registro incorporado en su lugar',
+    embeddedRegistryStatus: 'Registro incorporado: foto del {date} (commit {commit})',
+    customRegistryStatus: 'Usando tu copia cargada del registro ({count})',
     verifyEvidence: 'Verificar evidencia',
     selectFolder: 'Seleccionar carpeta',
     selectFolderAriaPrefix: 'Seleccionar',
@@ -112,7 +122,7 @@ const TRANSLATIONS: Record<Language, Translation> = {
     result: 'Resultado',
     initialTitle: 'Comprueba si una evidencia es auténtica',
     initialText:
-      'Carga la carpeta de la evidencia y la de organizaciones de confianza. Todo se comprueba aquí mismo, en tu navegador; nada se sube a ningún sitio.',
+      'Carga la carpeta de la evidencia (.vep). El portal ya lleva incorporado el registro público de organizaciones; si quieres máxima garantía, puedes aportar tu propia copia como opción avanzada. Todo se comprueba aquí mismo, en tu navegador; nada se sube a ningún sitio.',
     verifying: 'Verificando',
     processingTree: 'Procesando árbol en memoria',
     verdict: 'Veredicto',
@@ -150,7 +160,7 @@ const TRANSLATIONS: Record<Language, Translation> = {
       authenticText: 'Esta evidencia es genuina y no ha sido manipulada.',
       incompleteTitle: 'Verificación incompleta',
       incompleteText:
-        'Falta información para terminar de comprobarlo (por ejemplo, la carpeta de organizaciones de confianza). Esto no significa que la evidencia sea falsa: significa que aún no se ha podido comprobar del todo.',
+        'Falta información para terminar de comprobarlo. Esto no significa que la evidencia sea falsa: significa que aún no se ha podido comprobar del todo.',
       errorTitle: 'Se han detectado problemas',
       errorText: 'No podemos confirmar que esta evidencia sea auténtica. Revisa las comprobaciones marcadas en rojo.',
     },
@@ -234,8 +244,12 @@ const TRANSLATIONS: Record<Language, Translation> = {
     packageDescription: 'The folder containing the evidence and its seals.',
     transparencyTitle: 'Trusted organizations',
     transparencyDescription: 'Local copy of the public registry used to check who signs. Select the whole folder.',
-    missingTransparencyWarning:
-      'The trusted-organizations folder is missing. Without it, the signer cannot be verified and the result will not be conclusive.',
+    transparencyAdvancedToggleShow: 'Advanced option: load my own copy of the registry',
+    transparencyAdvancedToggleHide: 'Hide advanced option',
+    transparencyOverridesNote: 'Your copy overrides the embedded registry for this verification.',
+    transparencyUseEmbeddedInstead: 'Use the embedded registry instead',
+    embeddedRegistryStatus: 'Embedded registry: snapshot from {date} (commit {commit})',
+    customRegistryStatus: 'Using your loaded copy of the registry ({count})',
     verifyEvidence: 'Verify evidence',
     selectFolder: 'Select folder',
     selectFolderAriaPrefix: 'Select',
@@ -246,7 +260,7 @@ const TRANSLATIONS: Record<Language, Translation> = {
     result: 'Result',
     initialTitle: 'Check whether evidence is authentic',
     initialText:
-      'Load the evidence folder and the trusted-organizations folder. Everything is verified right here in your browser; nothing is uploaded anywhere.',
+      'Load the evidence folder (.vep). The portal already ships with the public organizations registry built in; for maximum assurance, you can bring your own copy as an advanced option. Everything is verified right here in your browser; nothing is uploaded anywhere.',
     verifying: 'Verifying',
     processingTree: 'Processing tree in memory',
     verdict: 'Verdict',
@@ -284,7 +298,7 @@ const TRANSLATIONS: Record<Language, Translation> = {
       authenticText: 'This evidence is genuine and has not been tampered with.',
       incompleteTitle: 'Incomplete verification',
       incompleteText:
-        'Some information is still missing to finish verification (for example, the trusted-organizations folder). This does not mean the evidence is false: it means it could not yet be fully checked.',
+        'Some information is still missing to finish verification. This does not mean the evidence is false: it means it could not yet be fully checked.',
       errorTitle: 'Problems detected',
       errorText: 'We cannot confirm that this evidence is authentic. Review the checks marked in red.',
     },
@@ -368,8 +382,12 @@ const TRANSLATIONS: Record<Language, Translation> = {
     packageDescription: 'Le dossier qui contient la preuve et ses sceaux.',
     transparencyTitle: 'Organisations de confiance',
     transparencyDescription: 'Copie locale du registre public pour vérifier qui signe. Sélectionnez le dossier complet.',
-    missingTransparencyWarning:
-      "Le dossier des organisations de confiance est absent. Sans lui, l'identité du signataire ne peut pas être vérifiée et le résultat ne sera pas concluant.",
+    transparencyAdvancedToggleShow: 'Option avancée : charger ma propre copie du registre',
+    transparencyAdvancedToggleHide: "Masquer l'option avancée",
+    transparencyOverridesNote: 'Votre copie remplace le registre incorporé pour cette vérification.',
+    transparencyUseEmbeddedInstead: 'Utiliser le registre incorporé à la place',
+    embeddedRegistryStatus: 'Registre incorporé : instantané du {date} (commit {commit})',
+    customRegistryStatus: 'Utilisation de votre copie chargée du registre ({count})',
     verifyEvidence: 'Vérifier la preuve',
     selectFolder: 'Sélectionner un dossier',
     selectFolderAriaPrefix: 'Sélectionner',
@@ -380,7 +398,7 @@ const TRANSLATIONS: Record<Language, Translation> = {
     result: 'Résultat',
     initialTitle: "Vérifier si une preuve est authentique",
     initialText:
-      "Chargez le dossier de la preuve et celui des organisations de confiance. Tout est vérifié ici même, dans votre navigateur ; rien n'est envoyé ailleurs.",
+      "Chargez le dossier de la preuve (.vep). Le portail intègre déjà le registre public des organisations ; pour une garantie maximale, vous pouvez apporter votre propre copie en option avancée. Tout est vérifié ici même, dans votre navigateur ; rien n'est envoyé ailleurs.",
     verifying: 'Vérification',
     processingTree: "Traitement de l'arborescence en mémoire",
     verdict: 'Verdict',
@@ -418,7 +436,7 @@ const TRANSLATIONS: Record<Language, Translation> = {
       authenticText: "Cette preuve est authentique et n'a pas été manipulée.",
       incompleteTitle: 'Vérification incomplète',
       incompleteText:
-        "Il manque encore des informations pour terminer la vérification (par exemple le dossier des organisations de confiance). Cela ne veut pas dire que la preuve est fausse : cela veut dire qu'elle n'a pas encore pu être entièrement vérifiée.",
+        "Il manque encore des informations pour terminer la vérification. Cela ne veut pas dire que la preuve est fausse : cela veut dire qu'elle n'a pas encore pu être entièrement vérifiée.",
       errorTitle: 'Problèmes détectés',
       errorText: "Nous ne pouvons pas confirmer que cette preuve est authentique. Vérifiez les contrôles marqués en rouge.",
     },
@@ -502,7 +520,12 @@ const TRANSLATIONS: Record<Language, Translation> = {
     packageDescription: '包含证据及其签章的文件夹。',
     transparencyTitle: '可信组织',
     transparencyDescription: '用于核验签署方的公共注册表本地副本。请选择整个文件夹。',
-    missingTransparencyWarning: '缺少可信组织文件夹。没有它就无法核验是谁签署了证据，结果也不会是确定性的。',
+    transparencyAdvancedToggleShow: '高级选项：加载我自己的注册表副本',
+    transparencyAdvancedToggleHide: '隐藏高级选项',
+    transparencyOverridesNote: '在本次验证中，你的副本将替代内置注册表。',
+    transparencyUseEmbeddedInstead: '改用内置注册表',
+    embeddedRegistryStatus: '内置注册表：{date} 快照（提交 {commit}）',
+    customRegistryStatus: '正在使用你加载的注册表副本（{count}）',
     verifyEvidence: '验证证据',
     selectFolder: '选择文件夹',
     selectFolderAriaPrefix: '选择',
@@ -512,7 +535,8 @@ const TRANSLATIONS: Record<Language, Translation> = {
     verifiedInBrowser: '在你的浏览器中完成验证。不会上传到任何服务器。',
     result: '结果',
     initialTitle: '检查证据是否真实',
-    initialText: '加载证据文件夹和可信组织文件夹。所有验证都在你的浏览器中完成；不会上传到任何地方。',
+    initialText:
+      '加载证据文件夹（.vep）。本工具已内置公共组织注册表；如需最高保障，你也可以加载自己的副本作为高级选项。所有验证都在你的浏览器中完成；不会上传到任何地方。',
     verifying: '验证中',
     processingTree: '正在内存中处理目录树',
     verdict: '结论',
@@ -548,7 +572,7 @@ const TRANSLATIONS: Record<Language, Translation> = {
       authenticTitle: '证据真实',
       authenticText: '该证据是真实的，且未被篡改。',
       incompleteTitle: '验证不完整',
-      incompleteText: '完成验证仍缺少部分信息（例如可信组织文件夹）。这不代表证据是假的，只表示目前还无法完全核验。',
+      incompleteText: '完成验证仍缺少部分信息。这不代表证据是假的，只表示目前还无法完全核验。',
       errorTitle: '发现问题',
       errorText: '我们无法确认该证据真实。请检查标红的项目。',
     },

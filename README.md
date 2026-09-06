@@ -35,8 +35,12 @@ docs/        user + developer docs
 ## Development
 
 ```
+git submodule update --init transparency/registry
 pnpm install
 pnpm test
 ```
 
-Requires Node 20+ and pnpm.
+Requires Node 20+ and pnpm. `transparency/registry` is a git submodule
+pinned to a snapshot of the public organizations registry
+(`Blue-Human/peaceos_organizations`); the web portal embeds it at build
+time — see [`web/README.md`](./web/README.md) for details.
