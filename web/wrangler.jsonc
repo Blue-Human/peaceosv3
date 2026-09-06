@@ -1,0 +1,23 @@
+{
+  // Static-assets-only Cloudflare deployment for the Verify portal.
+  //
+  // There is deliberately no "main" Worker entry point: verification runs
+  // 100% in the browser (see web/src/networkGuard.ts and AGENTS.md), so
+  // Cloudflare only ever serves the pre-built files in ./dist. No server
+  // code, no telemetry, no "phone home".
+  //
+  // `wrangler deploy` must be run from inside this `web/` directory so it
+  // picks up this config. In the Cloudflare dashboard the repo build stays
+  // at root ("pnpm run build", root directory "/") so that `spec` and
+  // `core` are compiled before `web`; only the DEPLOY command changes to
+  // `cd web && npx wrangler deploy`.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "peaceosv3",
+  "compatibility_date": "2026-09-06",
+  "assets": {
+    "directory": "./dist",
+    // SPA fallback: unknown paths return index.html (200) instead of a 404,
+    // so a hard refresh on any client-side route still loads the portal.
+    "not_found_handling": "single-page-application"
+  }
+}
