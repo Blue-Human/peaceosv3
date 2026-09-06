@@ -10,8 +10,12 @@
   },
   "scripts": {
     "build": "pnpm -r --if-present run build",
+    "deploy": "pnpm --dir web exec wrangler deploy --no-autoconfig",
+    "deploy:dry-run": "pnpm --dir web exec wrangler deploy --no-autoconfig --dry-run",
     "test": "pnpm -r --if-present run test",
-    "typecheck": "pnpm -r --if-present run typecheck"
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "versions:upload": "pnpm --dir web exec wrangler versions upload",
+    "versions:upload:dry-run": "pnpm --dir web exec wrangler versions upload --dry-run"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",
