@@ -9,8 +9,9 @@
   // `wrangler deploy` must be run from inside this `web/` directory so it
   // picks up this config. In the Cloudflare dashboard the repo build stays
   // at root ("pnpm run build", root directory "/") so that `spec` and
-  // `core` are compiled before `web`; use `pnpm run deploy` for deployment
-  // so Wrangler resolves from the pnpm workspace instead of `npx`/npm.
+  // `core` are compiled before `web`; use `pnpm run deploy` and
+  // `pnpm run versions:upload` for Cloudflare commands so Wrangler resolves
+  // from the pnpm workspace instead of `npx`/npm.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "peaceosv3",
   "compatibility_date": "2026-09-06",

@@ -9,11 +9,13 @@
     "generate:registry": "node scripts/build-embedded-registry.mjs",
     "dev": "node scripts/build-embedded-registry.mjs && vite",
     "build": "node scripts/build-embedded-registry.mjs && tsc -p tsconfig.json && vite build",
-    "deploy": "wrangler deploy",
-    "deploy:dry-run": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy --no-autoconfig",
+    "deploy:dry-run": "wrangler deploy --no-autoconfig --dry-run",
     "typecheck": "node scripts/build-embedded-registry.mjs && tsc -p tsconfig.json",
     "preview": "vite preview",
-    "test": "node scripts/build-embedded-registry.mjs && vitest run"
+    "test": "node scripts/build-embedded-registry.mjs && vitest run",
+    "versions:upload": "wrangler versions upload",
+    "versions:upload:dry-run": "wrangler versions upload --dry-run"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

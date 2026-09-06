@@ -10,10 +10,12 @@
   },
   "scripts": {
     "build": "pnpm --filter @peaceos/spec --filter @peaceos/core --filter @peaceos/cli --filter @peaceos/examples --filter @peaceos/web --if-present run build",
-    "deploy": "pnpm --dir web exec wrangler deploy",
-    "deploy:dry-run": "pnpm --dir web exec wrangler deploy --dry-run",
+    "deploy": "pnpm --dir web exec wrangler deploy --no-autoconfig",
+    "deploy:dry-run": "pnpm --dir web exec wrangler deploy --no-autoconfig --dry-run",
     "test": "pnpm --filter @peaceos/spec --filter @peaceos/core --filter @peaceos/cli --filter @peaceos/examples --filter @peaceos/web --if-present run test",
-    "typecheck": "pnpm --filter @peaceos/spec --filter @peaceos/core --filter @peaceos/cli --filter @peaceos/examples --filter @peaceos/web --if-present run typecheck"
+    "typecheck": "pnpm --filter @peaceos/spec --filter @peaceos/core --filter @peaceos/cli --filter @peaceos/examples --filter @peaceos/web --if-present run typecheck",
+    "versions:upload": "pnpm --dir web exec wrangler versions upload",
+    "versions:upload:dry-run": "pnpm --dir web exec wrangler versions upload --dry-run"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",
