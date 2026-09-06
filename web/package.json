@@ -9,6 +9,8 @@
     "generate:registry": "node scripts/build-embedded-registry.mjs",
     "dev": "node scripts/build-embedded-registry.mjs && vite",
     "build": "node scripts/build-embedded-registry.mjs && tsc -p tsconfig.json && vite build",
+    "deploy": "wrangler deploy",
+    "deploy:dry-run": "wrangler deploy --dry-run",
     "typecheck": "node scripts/build-embedded-registry.mjs && tsc -p tsconfig.json",
     "preview": "vite preview",
     "test": "node scripts/build-embedded-registry.mjs && vitest run"

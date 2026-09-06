@@ -10,6 +10,8 @@
   },
   "scripts": {
     "build": "pnpm --filter @peaceos/spec --filter @peaceos/core --filter @peaceos/cli --filter @peaceos/examples --filter @peaceos/web --if-present run build",
+    "deploy": "pnpm --dir web exec wrangler deploy",
+    "deploy:dry-run": "pnpm --dir web exec wrangler deploy --dry-run",
     "test": "pnpm --filter @peaceos/spec --filter @peaceos/core --filter @peaceos/cli --filter @peaceos/examples --filter @peaceos/web --if-present run test",
     "typecheck": "pnpm --filter @peaceos/spec --filter @peaceos/core --filter @peaceos/cli --filter @peaceos/examples --filter @peaceos/web --if-present run typecheck"
   },
