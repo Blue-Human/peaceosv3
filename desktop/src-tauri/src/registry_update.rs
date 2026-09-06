@@ -498,12 +498,20 @@ pub fn load_local_registry_state(app: tauri::AppHandle) -> Result<Option<LocalRe
 mod tests {
     use super::*;
 
-    fn temp_dir(label: &str) -> PathBuf {
+    /// A fresh, unique directory for this test to use as `final_dir`'s
+    /// *parent*. `persist_snapshot` derives its staging/backup sibling paths
+    /// (hard-coded names) from that parent, so tests that ran in parallel
+    /// against a shared parent (e.g. the bare system temp dir) would race on
+    /// those siblings — hence a whole unique root per test, not just a
+    /// unique leaf name.
+    fn unique_registry_dir(label: &str) -> PathBuf {
         let nanos = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        std::env::temp_dir().join(format!("peaceos-verify-desktop-test-{label}-{}-{nanos}", std::process::id()))
+        std::env::temp_dir()
+            .join(format!("peaceos-verify-desktop-test-{label}-{}-{nanos}", std::process::id()))
+            .join("organizations-registry")
     }
 
     // ---- slug / path parsing ----
@@ -578,11 +586,11 @@ mod tests {
 
     #[test]
     fn parses_a_well_formed_manifest() {
-        let text = b"# comment\norg-recolectora/org-2026 e3a835b50910454e9c2efe80d7e0bf47a99efa547bf331f68e170085e6ae3cd example\n";
+        let text = b"# comment\norg-recolectora/org-2026 e3a835b50910454e9c2efe80d7e0bf47a99efa547bf331f68e170085e6ae3cde example\n";
         let map = parse_manifest(text).unwrap();
         assert_eq!(
             map.get("org-recolectora/org-2026").map(String::as_str),
-            Some("e3a835b50910454e9c2efe80d7e0bf47a99efa547bf331f68e170085e6ae3cd")
+            Some("e3a835b50910454e9c2efe80d7e0bf47a99efa547bf331f68e170085e6ae3cde")
         );
     }
 
@@ -668,7 +676,7 @@ mod tests {
 
     #[test]
     fn persists_and_reloads_a_valid_snapshot() {
-        let dir = temp_dir("persist-ok");
+        let dir = unique_registry_dir("persist-ok");
         let (key, manifest) = valid_key_and_manifest();
 
         persist_snapshot(&dir, &[key.clone()], &manifest, "abc1234", "2026-01-01T00:00:00Z").unwrap();
@@ -678,18 +686,18 @@ mod tests {
         assert_eq!(loaded.date, "2026-01-01T00:00:00Z");
         assert_eq!(loaded.files.get("keys/org-test/key-test.pub").map(String::as_str), Some(base64_encode(&key.1).as_str()));
 
-        let _ = fs::remove_dir_all(&dir);
+        let _ = fs::remove_dir_all(dir.parent().unwrap());
     }
 
     #[test]
     fn missing_local_registry_yields_none_not_an_error() {
-        let dir = temp_dir("persist-missing");
+        let dir = unique_registry_dir("persist-missing");
         assert!(read_local_snapshot(&dir).unwrap().is_none());
     }
 
     #[test]
     fn a_failed_update_never_touches_the_previously_persisted_copy() {
-        let dir = temp_dir("persist-fail-closed");
+        let dir = unique_registry_dir("persist-fail-closed");
         let (good_key, good_manifest) = valid_key_and_manifest();
         persist_snapshot(&dir, &[good_key.clone()], &good_manifest, "good-commit", "2026-01-01T00:00:00Z").unwrap();
 
@@ -703,7 +711,7 @@ mod tests {
         let loaded = read_local_snapshot(&dir).unwrap().expect("expected the previous snapshot to survive");
         assert_eq!(loaded.commit, "good-commit");
 
-        let _ = fs::remove_dir_all(&dir);
+        let _ = fs::remove_dir_all(dir.parent().unwrap());
     }
 
     // ---- the real thing: against the actual canonical registry (needs network) ----
@@ -718,12 +726,12 @@ mod tests {
 
         validate_snapshot(&keys, &manifest_bytes).expect("the real canonical registry must validate cleanly");
 
-        let dir = temp_dir("real-registry");
+        let dir = unique_registry_dir("real-registry");
         persist_snapshot(&dir, &keys, &manifest_bytes, &commit, &date).unwrap();
         let loaded = read_local_snapshot(&dir).unwrap().expect("expected a snapshot after persisting");
         assert_eq!(loaded.commit, commit);
         assert_eq!(loaded.files.len(), keys.len());
 
-        let _ = fs::remove_dir_all(&dir);
+        let _ = fs::remove_dir_all(dir.parent().unwrap());
     }
 }
