@@ -22,9 +22,11 @@
 - **Incompleta, sin manipulación** (verdict = problems_detected pero NO hay ninguna
   en fail; solo hay "sin comprobar"/not_determined)
   - Título: "Verificación incompleta"
-  - Texto: "Falta información para terminar de comprobarlo (por ejemplo, la carpeta
-    de organizaciones de confianza). Esto no significa que la evidencia sea falsa:
-    significa que aún no se ha podido comprobar del todo."
+  - Texto: "Falta información para terminar de comprobarlo. Esto no significa que la
+    evidencia sea falsa: significa que aún no se ha podido comprobar del todo."
+  - Nota: desde que el registro de organizaciones va incorporado por defecto, este
+    caso ya no lo dispara la falta de esa carpeta (siempre hay una); solo lo disparan
+    otras comprobaciones sin determinar (por ejemplo, custodia o redacciones).
 
 *(Distinguir estos dos casos es composición de UI a partir del report, no lógica de
 verificación: está permitido.)*
@@ -114,23 +116,38 @@ tooltip o icono de ayuda), y el texto del estado.
 - Evidencia:
   - Etiqueta: "Evidencia a verificar (carpeta .vep)"
   - Ayuda: "La carpeta que contiene la evidencia y sus sellos."
-- Organizaciones de confianza (evitar la palabra "transparencia" a secas):
-  - Etiqueta: "Organizaciones de confianza"
-  - Ayuda: "Una copia local del registro público que permite comprobar quién firma la
-    evidencia. Selecciona la carpeta completa, no un archivo suelto."
+  - Es la única carga obligatoria. El registro de organizaciones de confianza ya va
+    incorporado en el portal (ver más abajo); no hace falta cargarlo a mano.
+- Organizaciones de confianza — opción avanzada (evitar la palabra "transparencia" a
+  secas):
+  - El portal siempre parte de una copia incorporada del registro público (una foto
+    tomada al construir el portal). Esta sección está colapsada por defecto y solo
+    hace falta abrirla si el usuario quiere aportar su propia copia como garantía
+    adicional.
+  - Línea de estado (siempre visible, aunque la sección esté colapsada): "Registro
+    incorporado: foto del {fecha} (commit {commit})" — la fecha y el commit del
+    registro tal y como se construyó el portal.
+  - Enlace para abrir la sección: "Opción avanzada: cargar mi propia copia del
+    registro" / para cerrarla: "Ocultar opción avanzada".
+  - Dentro, al abrirla:
+    - Etiqueta: "Organizaciones de confianza"
+    - Ayuda: "Copia local del registro público para comprobar quién firma. Selecciona
+      la carpeta completa."
+    - Si ya hay una copia cargada, aviso: "Tu copia sustituye al registro incorporado
+      en esta verificación." y un enlace para deshacerlo: "Usar el registro
+      incorporado en su lugar".
+  - Cuando el usuario ha cargado su copia, la línea de estado cambia a: "Usando tu
+    copia cargada del registro (N archivos)".
 - Estados: "Sin seleccionar" / "X archivos cargados"
 - Botón: "Verificar evidencia"
 
 ## Estado inicial (antes de verificar)
 
 - Título: "Comprueba si una evidencia es auténtica"
-- Texto: "Carga la carpeta de la evidencia y la de organizaciones de confianza. Todo
-  se comprueba aquí mismo, en tu navegador; nada se sube a ningún sitio."
-
-## Aviso de falta de organizaciones de confianza
-
-- "Falta la carpeta de organizaciones de confianza. Sin ella no se puede comprobar
-  quién firma la evidencia, y el resultado no será concluyente."
+- Texto: "Carga la carpeta de la evidencia (.vep). El portal ya lleva incorporado el
+  registro público de organizaciones; si quieres máxima garantía, puedes aportar tu
+  propia copia como opción avanzada. Todo se comprueba aquí mismo, en tu navegador;
+  nada se sube a ningún sitio."
 
 ## Línea de confianza (al pie de los resultados)
 

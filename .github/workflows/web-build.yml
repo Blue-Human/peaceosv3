@@ -1,0 +1,41 @@
+name: Web build
+
+# Build-only: proves the portal (including the embedded transparency
+# registry) still builds from a clean checkout. No deploy step and no
+# credentials here on purpose — wire your own deploy step onto the
+# `web-dist` artifact this job uploads.
+#
+# Re-run this after bumping the transparency/registry submodule
+# (see web/README.md "Updating the embedded registry") to get a fresh
+# build artifact with the new registry snapshot embedded.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist

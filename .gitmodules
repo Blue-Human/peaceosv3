@@ -1,0 +1,3 @@
+[submodule "transparency/registry"]
+	path = transparency/registry
+	url = https://github.com/Blue-Human/peaceos_organizations

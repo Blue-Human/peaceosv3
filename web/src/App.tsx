@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent, InputHTMLAttributes } from 'react';
 import { verifyPackageFiles } from '@peaceos/core/verify';
 import type { FileTree } from '@peaceos/core/file-tree';
@@ -40,7 +40,8 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 
-import { getCheckCopy, getStatusDescription, getStatusLabel, getVerdictCopy } from './copy.js';
+import { formatCustomRegistryStatus, formatEmbeddedRegistryStatus, getCheckCopy, getStatusDescription, getStatusLabel, getVerdictCopy } from './copy.js';
+import { buildEmbeddedTransparencyTree, embeddedRegistryVersion, resolveTransparencyTree } from './embeddedTransparency.js';
 import {
   buildFileTreeFromFiles,
   collectDroppedDirectoryFiles,
@@ -48,6 +49,7 @@ import {
 } from './fileTree.js';
 import { getTranslation, isLanguage, type Language } from './i18n.js';
 import { LanguageSelector } from './languageSelector.js';
+import { withNetworkBlocked } from './networkGuard.js';
 
 const LOGO_SRC = '/images/Verify_POS_logo.png';
 const LANGUAGE_STORAGE_KEY = 'peaceos.verify.language';
@@ -64,33 +66,6 @@ interface DirectoryPickerProps {
   language: Language;
   tree: FileTree | null;
   onFiles: (files: BrowserDirectoryFile[]) => Promise<void>;
-}
-
-async function withNetworkBlocked<T>(action: () => Promise<T>): Promise<{ result: T; networkAttempts: number }> {
-  let networkAttempts = 0;
-  const originalFetch = window.fetch;
-  const originalOpen = window.XMLHttpRequest.prototype.open;
-
-  window.fetch = (() => {
-    networkAttempts += 1;
-    return Promise.reject(new Error('Network requests are disabled during browser verification.'));
-  }) as typeof window.fetch;
-
-  window.XMLHttpRequest.prototype.open = function blockedOpen() {
-    networkAttempts += 1;
-    throw new Error('Network requests are disabled during browser verification.');
-  } as typeof originalOpen;
-
-  try {
-    const result = await action();
-    if (networkAttempts > 0) {
-      throw new Error(`Verification attempted ${networkAttempts} network request(s).`);
-    }
-    return { result, networkAttempts };
-  } finally {
-    window.fetch = originalFetch;
-    window.XMLHttpRequest.prototype.open = originalOpen;
-  }
 }
 
 function getInitialLanguage(): Language {
@@ -227,19 +202,83 @@ function DirectoryPicker({
   );
 }
 
+function TransparencySection({
+  transparencyTree,
+  transparencyPickerOpen,
+  language,
+  onLoadDirectory,
+  onTogglePicker,
+  onUseEmbeddedInstead,
+}: {
+  transparencyTree: FileTree | null;
+  transparencyPickerOpen: boolean;
+  language: Language;
+  onLoadDirectory: (files: BrowserDirectoryFile[]) => Promise<void>;
+  onTogglePicker: () => void;
+  onUseEmbeddedInstead: () => void;
+}) {
+  const t = getTranslation(language);
+  const showPicker = transparencyPickerOpen || Boolean(transparencyTree);
+
+  return (
+    <Box sx={{ py: 1.15, borderBottom: 1, borderColor: 'divider' }}>
+      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+        <ShieldOutlinedIcon fontSize="small" color={transparencyTree ? 'success' : 'action'} />
+        <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+          {transparencyTree
+            ? formatCustomRegistryStatus(transparencyTree.size, language)
+            : formatEmbeddedRegistryStatus(embeddedRegistryVersion, language)}
+        </Typography>
+      </Stack>
+      <Button size="small" sx={{ mt: 0.25, px: 0, minWidth: 0 }} onClick={transparencyTree ? onUseEmbeddedInstead : onTogglePicker}>
+        {transparencyTree
+          ? t.transparencyUseEmbeddedInstead
+          : transparencyPickerOpen
+            ? t.transparencyAdvancedToggleHide
+            : t.transparencyAdvancedToggleShow}
+      </Button>
+
+      <Collapse in={showPicker} timeout="auto" unmountOnExit>
+        <Box sx={{ pt: 1 }}>
+          <DirectoryPicker
+            title={t.transparencyTitle}
+            description={t.transparencyDescription}
+            buttonLabel={t.selectFolder}
+            selectAriaPrefix={t.selectFolderAriaPrefix}
+            language={language}
+            tree={transparencyTree}
+            onFiles={onLoadDirectory}
+          />
+          {transparencyTree && (
+            <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
+              {t.transparencyOverridesNote}
+            </Typography>
+          )}
+        </Box>
+      </Collapse>
+    </Box>
+  );
+}
+
 function InputRail({
   packageTree,
   transparencyTree,
+  transparencyPickerOpen,
   loading,
   language,
   onLoadDirectory,
+  onToggleTransparencyPicker,
+  onUseEmbeddedInstead,
   onVerify,
 }: {
   packageTree: FileTree | null;
   transparencyTree: FileTree | null;
+  transparencyPickerOpen: boolean;
   loading: boolean;
   language: Language;
   onLoadDirectory: (kind: DirectoryKind, files: BrowserDirectoryFile[]) => Promise<void>;
+  onToggleTransparencyPicker: () => void;
+  onUseEmbeddedInstead: () => void;
   onVerify: () => Promise<void>;
 }) {
   const t = getTranslation(language);
@@ -273,21 +312,14 @@ function InputRail({
           onFiles={(files) => onLoadDirectory('package', files)}
         />
 
-        <DirectoryPicker
-          title={t.transparencyTitle}
-          description={t.transparencyDescription}
-          buttonLabel={t.selectFolder}
-          selectAriaPrefix={t.selectFolderAriaPrefix}
+        <TransparencySection
+          transparencyTree={transparencyTree}
+          transparencyPickerOpen={transparencyPickerOpen}
           language={language}
-          tree={transparencyTree}
-          onFiles={(files) => onLoadDirectory('transparency', files)}
+          onLoadDirectory={(files) => onLoadDirectory('transparency', files)}
+          onTogglePicker={onToggleTransparencyPicker}
+          onUseEmbeddedInstead={onUseEmbeddedInstead}
         />
-
-        {!transparencyTree && (
-          <Alert severity="warning" sx={{ py: 0.5 }}>
-            {t.missingTransparencyWarning}
-          </Alert>
-        )}
 
         <Button
           fullWidth
@@ -578,11 +610,13 @@ function ReportView({ report, language }: { report: VerifyReport; language: Lang
 export function App() {
   const [packageTree, setPackageTree] = useState<FileTree | null>(null);
   const [transparencyTree, setTransparencyTree] = useState<FileTree | null>(null);
+  const [transparencyPickerOpen, setTransparencyPickerOpen] = useState(false);
   const [report, setReport] = useState<VerifyReport | null>(null);
   const [error, setError] = useState<AppError>(null);
   const [loading, setLoading] = useState(false);
   const [language, setLanguage] = useState<Language>(getInitialLanguage);
   const t = getTranslation(language);
+  const embeddedTransparencyTree = useMemo(() => buildEmbeddedTransparencyTree(), []);
 
   useEffect(() => {
     document.documentElement.lang = getDocumentLanguage(language);
@@ -602,6 +636,16 @@ export function App() {
     }
   }
 
+  function toggleTransparencyPicker() {
+    setTransparencyPickerOpen((open) => !open);
+  }
+
+  function useEmbeddedRegistryInstead() {
+    setTransparencyTree(null);
+    setTransparencyPickerOpen(false);
+    setReport(null);
+  }
+
   async function verifyInBrowser() {
     if (!packageTree) {
       setError({ type: 'local', key: 'selectEvidenceFirst' });
@@ -616,7 +660,7 @@ export function App() {
       const { result } = await withNetworkBlocked(() =>
         verifyPackageFiles(packageTree, {
           packagePath: '(browser-selected .vep directory)',
-          transparencyFiles: transparencyTree ?? undefined,
+          transparencyFiles: resolveTransparencyTree(transparencyTree, embeddedTransparencyTree),
         }),
       );
       setReport(result);
@@ -685,9 +729,12 @@ export function App() {
               <InputRail
                 packageTree={packageTree}
                 transparencyTree={transparencyTree}
+                transparencyPickerOpen={transparencyPickerOpen}
                 loading={loading}
                 language={language}
                 onLoadDirectory={loadDirectory}
+                onToggleTransparencyPicker={toggleTransparencyPicker}
+                onUseEmbeddedInstead={useEmbeddedRegistryInstead}
                 onVerify={verifyInBrowser}
               />
 
