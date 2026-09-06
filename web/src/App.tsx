@@ -40,7 +40,25 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 
-import { formatCustomRegistryStatus, formatEmbeddedRegistryStatus, getCheckCopy, getStatusDescription, getStatusLabel, getVerdictCopy } from './copy.js';
+import {
+  formatCustomRegistryStatus,
+  formatEmbeddedRegistryStatus,
+  formatStaleWarning,
+  formatUpdateSuccess,
+  formatUpdatedRegistryStatus,
+  getCheckCopy,
+  getStatusDescription,
+  getStatusLabel,
+  getVerdictCopy,
+} from './copy.js';
+import {
+  describeUpdateError,
+  isDesktop,
+  isRegistryStale,
+  loadUpdatedRegistry,
+  updateOrganizationsRegistry,
+  type RegistryVersion,
+} from './desktopRegistry.js';
 import { buildEmbeddedTransparencyTree, embeddedRegistryVersion, resolveTransparencyTree } from './embeddedTransparency.js';
 import {
   buildFileTreeFromFiles,
@@ -57,6 +75,7 @@ const LANGUAGE_STORAGE_KEY = 'peaceos.verify.language';
 type DirectoryKind = 'package' | 'transparency';
 type StatusTone = 'success' | 'error' | 'warning' | 'info';
 type AppError = { type: 'local'; key: 'selectEvidenceFirst' } | { type: 'raw'; message: string } | null;
+type RegistryUpdateStatus = 'idle' | 'loading' | 'success' | 'error';
 
 interface DirectoryPickerProps {
   title: string;
@@ -206,31 +225,73 @@ function TransparencySection({
   transparencyTree,
   transparencyPickerOpen,
   language,
+  effectiveVersion,
+  effectiveSource,
+  isDesktopApp,
+  updateStatus,
+  updateMessage,
   onLoadDirectory,
   onTogglePicker,
-  onUseEmbeddedInstead,
+  onUseDefaultInstead,
+  onUpdateRegistry,
 }: {
   transparencyTree: FileTree | null;
   transparencyPickerOpen: boolean;
   language: Language;
+  effectiveVersion: RegistryVersion;
+  effectiveSource: 'updated' | 'embedded';
+  isDesktopApp: boolean;
+  updateStatus: RegistryUpdateStatus;
+  updateMessage: string | null;
   onLoadDirectory: (files: BrowserDirectoryFile[]) => Promise<void>;
   onTogglePicker: () => void;
-  onUseEmbeddedInstead: () => void;
+  onUseDefaultInstead: () => void;
+  onUpdateRegistry: () => void;
 }) {
   const t = getTranslation(language);
   const showPicker = transparencyPickerOpen || Boolean(transparencyTree);
+  const stale = !transparencyTree && isRegistryStale(effectiveVersion.date);
+
+  const statusText = transparencyTree
+    ? formatCustomRegistryStatus(transparencyTree.size, language)
+    : effectiveSource === 'updated'
+      ? formatUpdatedRegistryStatus(effectiveVersion, language)
+      : formatEmbeddedRegistryStatus(effectiveVersion, language);
 
   return (
     <Box sx={{ py: 1.15, borderBottom: 1, borderColor: 'divider' }}>
       <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
         <ShieldOutlinedIcon fontSize="small" color={transparencyTree ? 'success' : 'action'} />
         <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
-          {transparencyTree
-            ? formatCustomRegistryStatus(transparencyTree.size, language)
-            : formatEmbeddedRegistryStatus(embeddedRegistryVersion, language)}
+          {statusText}
         </Typography>
       </Stack>
-      <Button size="small" sx={{ mt: 0.25, px: 0, minWidth: 0 }} onClick={transparencyTree ? onUseEmbeddedInstead : onTogglePicker}>
+
+      {stale && (
+        <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.35 }}>
+          {formatStaleWarning(language)}
+        </Typography>
+      )}
+
+      {isDesktopApp && !transparencyTree && (
+        <Stack spacing={0.15} sx={{ mt: 0.35, alignItems: 'flex-start' }}>
+          <Button
+            size="small"
+            sx={{ px: 0, minWidth: 0 }}
+            onClick={onUpdateRegistry}
+            disabled={updateStatus === 'loading'}
+          >
+            {updateStatus === 'loading' ? t.updateRegistryButtonLoading : t.updateRegistryButton}
+          </Button>
+          {updateMessage && (
+            <Typography variant="caption" color={updateStatus === 'error' ? 'error.main' : 'success.main'}>
+              {updateMessage}
+            </Typography>
+          )}
+        </Stack>
+      )}
+
+      <Button size="small" sx={{ mt: 0.35, px: 0, minWidth: 0 }} onClick={transparencyTree ? onUseDefaultInstead : onTogglePicker}>
         {transparencyTree
           ? t.transparencyUseEmbeddedInstead
           : transparencyPickerOpen
@@ -264,21 +325,33 @@ function InputRail({
   packageTree,
   transparencyTree,
   transparencyPickerOpen,
+  effectiveVersion,
+  effectiveSource,
+  isDesktopApp,
+  updateStatus,
+  updateMessage,
   loading,
   language,
   onLoadDirectory,
   onToggleTransparencyPicker,
-  onUseEmbeddedInstead,
+  onUseDefaultInstead,
+  onUpdateRegistry,
   onVerify,
 }: {
   packageTree: FileTree | null;
   transparencyTree: FileTree | null;
   transparencyPickerOpen: boolean;
+  effectiveVersion: RegistryVersion;
+  effectiveSource: 'updated' | 'embedded';
+  isDesktopApp: boolean;
+  updateStatus: RegistryUpdateStatus;
+  updateMessage: string | null;
   loading: boolean;
   language: Language;
   onLoadDirectory: (kind: DirectoryKind, files: BrowserDirectoryFile[]) => Promise<void>;
   onToggleTransparencyPicker: () => void;
-  onUseEmbeddedInstead: () => void;
+  onUseDefaultInstead: () => void;
+  onUpdateRegistry: () => void;
   onVerify: () => Promise<void>;
 }) {
   const t = getTranslation(language);
@@ -316,9 +389,15 @@ function InputRail({
           transparencyTree={transparencyTree}
           transparencyPickerOpen={transparencyPickerOpen}
           language={language}
+          effectiveVersion={effectiveVersion}
+          effectiveSource={effectiveSource}
+          isDesktopApp={isDesktopApp}
+          updateStatus={updateStatus}
+          updateMessage={updateMessage}
           onLoadDirectory={(files) => onLoadDirectory('transparency', files)}
           onTogglePicker={onToggleTransparencyPicker}
-          onUseEmbeddedInstead={onUseEmbeddedInstead}
+          onUseDefaultInstead={onUseDefaultInstead}
+          onUpdateRegistry={onUpdateRegistry}
         />
 
         <Button
@@ -611,17 +690,38 @@ export function App() {
   const [packageTree, setPackageTree] = useState<FileTree | null>(null);
   const [transparencyTree, setTransparencyTree] = useState<FileTree | null>(null);
   const [transparencyPickerOpen, setTransparencyPickerOpen] = useState(false);
+  const [updatedRegistry, setUpdatedRegistry] = useState<{ tree: FileTree; version: RegistryVersion } | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<RegistryUpdateStatus>('idle');
+  const [updateMessage, setUpdateMessage] = useState<string | null>(null);
   const [report, setReport] = useState<VerifyReport | null>(null);
   const [error, setError] = useState<AppError>(null);
   const [loading, setLoading] = useState(false);
   const [language, setLanguage] = useState<Language>(getInitialLanguage);
   const t = getTranslation(language);
   const embeddedTransparencyTree = useMemo(() => buildEmbeddedTransparencyTree(), []);
+  const isDesktopApp = useMemo(() => isDesktop(), []);
 
   useEffect(() => {
     document.documentElement.lang = getDocumentLanguage(language);
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
   }, [language]);
+
+  useEffect(() => {
+    if (!isDesktopApp) return;
+    let cancelled = false;
+    loadUpdatedRegistry()
+      .then((snapshot) => {
+        if (!cancelled) setUpdatedRegistry(snapshot);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setUpdateStatus('error');
+        setUpdateMessage(describeUpdateError(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isDesktopApp]);
 
   async function loadDirectory(kind: DirectoryKind, files: BrowserDirectoryFile[]) {
     setError(null);
@@ -640,10 +740,27 @@ export function App() {
     setTransparencyPickerOpen((open) => !open);
   }
 
-  function useEmbeddedRegistryInstead() {
+  function useDefaultRegistryInstead() {
     setTransparencyTree(null);
     setTransparencyPickerOpen(false);
     setReport(null);
+  }
+
+  async function handleUpdateRegistry() {
+    setUpdateStatus('loading');
+    setUpdateMessage(null);
+
+    try {
+      const outcome = await updateOrganizationsRegistry();
+      const snapshot = await loadUpdatedRegistry();
+      setUpdatedRegistry(snapshot);
+      setUpdateStatus('success');
+      setUpdateMessage(formatUpdateSuccess(outcome, language));
+      setReport(null);
+    } catch (err) {
+      setUpdateStatus('error');
+      setUpdateMessage(describeUpdateError(err));
+    }
   }
 
   async function verifyInBrowser() {
@@ -660,7 +777,7 @@ export function App() {
       const { result } = await withNetworkBlocked(() =>
         verifyPackageFiles(packageTree, {
           packagePath: '(browser-selected .vep directory)',
-          transparencyFiles: resolveTransparencyTree(transparencyTree, embeddedTransparencyTree),
+          transparencyFiles: resolveTransparencyTree(transparencyTree, updatedRegistry?.tree ?? null, embeddedTransparencyTree),
         }),
       );
       setReport(result);
@@ -670,6 +787,9 @@ export function App() {
       setLoading(false);
     }
   }
+
+  const effectiveVersion = updatedRegistry?.version ?? embeddedRegistryVersion;
+  const effectiveSource: 'updated' | 'embedded' = updatedRegistry ? 'updated' : 'embedded';
 
   return (
     <Box
@@ -730,11 +850,17 @@ export function App() {
                 packageTree={packageTree}
                 transparencyTree={transparencyTree}
                 transparencyPickerOpen={transparencyPickerOpen}
+                effectiveVersion={effectiveVersion}
+                effectiveSource={effectiveSource}
+                isDesktopApp={isDesktopApp}
+                updateStatus={updateStatus}
+                updateMessage={updateMessage}
                 loading={loading}
                 language={language}
                 onLoadDirectory={loadDirectory}
                 onToggleTransparencyPicker={toggleTransparencyPicker}
-                onUseEmbeddedInstead={useEmbeddedRegistryInstead}
+                onUseDefaultInstead={useDefaultRegistryInstead}
+                onUpdateRegistry={handleUpdateRegistry}
                 onVerify={verifyInBrowser}
               />
 

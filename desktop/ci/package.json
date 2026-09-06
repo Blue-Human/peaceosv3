@@ -1,0 +1,9 @@
+{
+  "name": "peaceos-verify-desktop-ci-tools",
+  "private": true,
+  "type": "module",
+  "description": "CI-only browser-automation tooling to smoke-test the compiled desktop app. Not a workspace member (see pnpm-workspace.yaml), not shipped, not a project dependency of the app itself.",
+  "devDependencies": {
+    "playwright-core": "1.48.2"
+  }
+}

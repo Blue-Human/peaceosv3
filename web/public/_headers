@@ -1,0 +1,15 @@
+# Cloudflare response headers for the Verify portal (applied to every route).
+# Vite copies this file verbatim from web/public/ to web/dist/_headers.
+#
+# The portal verifies .vep packages 100% client-side and never contacts any
+# server (see web/src/networkGuard.ts and AGENTS.md "Open and quiet"). This
+# policy enforces that structurally rather than trusting the code:
+#   connect-src 'none'              no fetch / XHR / WebSocket, from any path
+#   script-src  'wasm-unsafe-eval'  lets libsodium compile its bundled
+#                                   WebAssembly module (Ed25519 verify);
+#                                   plain eval() / new Function() stay blocked
+#   style-src   'unsafe-inline'     MUI + Emotion inject <style> at runtime
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff

@@ -1,4 +1,5 @@
 import type { FileTree } from '@peaceos/core/file-tree';
+import { base64ToBytes } from './base64.js';
 import {
   EMBEDDED_REGISTRY_FILES,
   EMBEDDED_REGISTRY_VERSION,
@@ -7,13 +8,6 @@ import {
 
 export type { EmbeddedRegistryVersion };
 export const embeddedRegistryVersion: EmbeddedRegistryVersion = EMBEDDED_REGISTRY_VERSION;
-
-function base64ToBytes(base64: string): Uint8Array {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
 
 /**
  * Builds the transparency FileTree from data bundled into the app at build
@@ -29,9 +23,11 @@ export function buildEmbeddedTransparencyTree(): FileTree {
 }
 
 /**
- * A user-provided transparency copy always prevails over the embedded
- * snapshot — it is the "bring your own copy" maximum-assurance path.
+ * Priority order: a user-provided copy (the "bring your own copy" advanced
+ * option) always prevails; failing that, a locally-updated copy (desktop
+ * app only, via "Update organizations" — always null in the browser
+ * portal); failing that, the registry embedded at build time.
  */
-export function resolveTransparencyTree(customTree: FileTree | null, embeddedTree: FileTree): FileTree {
-  return customTree ?? embeddedTree;
+export function resolveTransparencyTree(customTree: FileTree | null, updatedTree: FileTree | null, embeddedTree: FileTree): FileTree {
+  return customTree ?? updatedTree ?? embeddedTree;
 }

@@ -1,5 +1,7 @@
 import type { CheckResult, VerifyReport } from '@peaceos/core';
 
+import type { RegistryUpdateOutcome, RegistryVersion } from './desktopRegistry.js';
+import { STALE_THRESHOLD_DAYS } from './desktopRegistry.js';
 import type { EmbeddedRegistryVersion } from './embeddedTransparency.js';
 import type { Language } from './i18n.js';
 import { getTranslation } from './i18n.js';
@@ -9,6 +11,25 @@ export function formatEmbeddedRegistryStatus(version: EmbeddedRegistryVersion, l
   return getTranslation(language)
     .embeddedRegistryStatus.replace('{date}', date)
     .replace('{commit}', version.commit);
+}
+
+export function formatUpdatedRegistryStatus(version: RegistryVersion, language: Language): string {
+  const date = version.date.slice(0, 10);
+  return getTranslation(language)
+    .updatedRegistryStatus.replace('{date}', date)
+    .replace('{commit}', version.commit.slice(0, 7));
+}
+
+export function formatUpdateSuccess(outcome: RegistryUpdateOutcome, language: Language): string {
+  const date = outcome.date.slice(0, 10);
+  return getTranslation(language)
+    .updateRegistrySuccess.replace('{date}', date)
+    .replace('{commit}', outcome.commit.slice(0, 7));
+}
+
+export function formatStaleWarning(language: Language): string {
+  const weeks = Math.round(STALE_THRESHOLD_DAYS / 7);
+  return getTranslation(language).registryStaleWarning.replace('{weeks}', String(weeks));
 }
 
 export function formatCustomRegistryStatus(fileCount: number, language: Language): string {

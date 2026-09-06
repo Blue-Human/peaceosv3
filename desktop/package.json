@@ -1,0 +1,16 @@
+{
+  "name": "@peaceos/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tauri desktop shell for the PeaceOS Verify portal (Windows/macOS/Linux). Wraps @peaceos/web as-is; no verification logic lives here.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4"
+  }
+}

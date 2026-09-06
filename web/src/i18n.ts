@@ -29,6 +29,11 @@ export interface Translation {
   transparencyUseEmbeddedInstead: string;
   embeddedRegistryStatus: string;
   customRegistryStatus: string;
+  updatedRegistryStatus: string;
+  updateRegistryButton: string;
+  updateRegistryButtonLoading: string;
+  updateRegistrySuccess: string;
+  registryStaleWarning: string;
   verifyEvidence: string;
   selectFolder: string;
   selectFolderAriaPrefix: string;
@@ -109,9 +114,14 @@ const TRANSLATIONS: Record<Language, Translation> = {
     transparencyAdvancedToggleShow: 'Opción avanzada: cargar mi propia copia del registro',
     transparencyAdvancedToggleHide: 'Ocultar opción avanzada',
     transparencyOverridesNote: 'Tu copia sustituye al registro incorporado en esta verificación.',
-    transparencyUseEmbeddedInstead: 'Usar el registro incorporado en su lugar',
+    transparencyUseEmbeddedInstead: 'Usar el registro por defecto en su lugar',
     embeddedRegistryStatus: 'Registro incorporado: foto del {date} (commit {commit})',
     customRegistryStatus: 'Usando tu copia cargada del registro ({count})',
+    updatedRegistryStatus: 'Registro actualizado: foto del {date} (commit {commit})',
+    updateRegistryButton: 'Actualizar organizaciones',
+    updateRegistryButtonLoading: 'Actualizando…',
+    updateRegistrySuccess: 'Registro actualizado a la versión del {date} (commit {commit}).',
+    registryStaleWarning: 'El registro en uso tiene más de {weeks} semanas. Considera actualizarlo.',
     verifyEvidence: 'Verificar evidencia',
     selectFolder: 'Seleccionar carpeta',
     selectFolderAriaPrefix: 'Seleccionar',
@@ -247,9 +257,14 @@ const TRANSLATIONS: Record<Language, Translation> = {
     transparencyAdvancedToggleShow: 'Advanced option: load my own copy of the registry',
     transparencyAdvancedToggleHide: 'Hide advanced option',
     transparencyOverridesNote: 'Your copy overrides the embedded registry for this verification.',
-    transparencyUseEmbeddedInstead: 'Use the embedded registry instead',
+    transparencyUseEmbeddedInstead: 'Use the default registry instead',
     embeddedRegistryStatus: 'Embedded registry: snapshot from {date} (commit {commit})',
     customRegistryStatus: 'Using your loaded copy of the registry ({count})',
+    updatedRegistryStatus: 'Updated registry: snapshot from {date} (commit {commit})',
+    updateRegistryButton: 'Update organizations',
+    updateRegistryButtonLoading: 'Updating…',
+    updateRegistrySuccess: 'Registry updated to the {date} version (commit {commit}).',
+    registryStaleWarning: 'The registry in use is more than {weeks} weeks old. Consider updating it.',
     verifyEvidence: 'Verify evidence',
     selectFolder: 'Select folder',
     selectFolderAriaPrefix: 'Select',
@@ -385,9 +400,14 @@ const TRANSLATIONS: Record<Language, Translation> = {
     transparencyAdvancedToggleShow: 'Option avancée : charger ma propre copie du registre',
     transparencyAdvancedToggleHide: "Masquer l'option avancée",
     transparencyOverridesNote: 'Votre copie remplace le registre incorporé pour cette vérification.',
-    transparencyUseEmbeddedInstead: 'Utiliser le registre incorporé à la place',
+    transparencyUseEmbeddedInstead: 'Utiliser le registre par défaut à la place',
     embeddedRegistryStatus: 'Registre incorporé : instantané du {date} (commit {commit})',
     customRegistryStatus: 'Utilisation de votre copie chargée du registre ({count})',
+    updatedRegistryStatus: 'Registre mis à jour : instantané du {date} (commit {commit})',
+    updateRegistryButton: 'Mettre à jour les organisations',
+    updateRegistryButtonLoading: 'Mise à jour…',
+    updateRegistrySuccess: 'Registre mis à jour vers la version du {date} (commit {commit}).',
+    registryStaleWarning: 'Le registre utilisé a plus de {weeks} semaines. Pensez à le mettre à jour.',
     verifyEvidence: 'Vérifier la preuve',
     selectFolder: 'Sélectionner un dossier',
     selectFolderAriaPrefix: 'Sélectionner',
@@ -523,9 +543,14 @@ const TRANSLATIONS: Record<Language, Translation> = {
     transparencyAdvancedToggleShow: '高级选项：加载我自己的注册表副本',
     transparencyAdvancedToggleHide: '隐藏高级选项',
     transparencyOverridesNote: '在本次验证中，你的副本将替代内置注册表。',
-    transparencyUseEmbeddedInstead: '改用内置注册表',
+    transparencyUseEmbeddedInstead: '改用默认注册表',
     embeddedRegistryStatus: '内置注册表：{date} 快照（提交 {commit}）',
     customRegistryStatus: '正在使用你加载的注册表副本（{count}）',
+    updatedRegistryStatus: '已更新注册表：{date} 快照（提交 {commit}）',
+    updateRegistryButton: '更新组织注册表',
+    updateRegistryButtonLoading: '正在更新…',
+    updateRegistrySuccess: '注册表已更新到 {date} 版本（提交 {commit}）。',
+    registryStaleWarning: '当前使用的注册表已超过 {weeks} 周未更新，建议更新。',
     verifyEvidence: '验证证据',
     selectFolder: '选择文件夹',
     selectFolderAriaPrefix: '选择',

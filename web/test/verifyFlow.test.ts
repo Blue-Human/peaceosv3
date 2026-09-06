@@ -23,8 +23,9 @@ describe('verification against the embedded transparency registry', () => {
       verifyPackageFiles(packageTree, {
         packagePath: VALID_EXAMPLE_PACKAGE,
         // Same call the portal makes when the user has not loaded a custom
-        // transparency copy: resolveTransparencyTree(null, embedded) === embedded.
-        transparencyFiles: resolveTransparencyTree(null, embeddedTree),
+        // transparency copy and (on desktop) nothing has been updated yet:
+        // resolveTransparencyTree(null, null, embedded) === embedded.
+        transparencyFiles: resolveTransparencyTree(null, null, embeddedTree),
       }),
     );
 
@@ -42,7 +43,7 @@ describe('verification against the embedded transparency registry', () => {
     // it were used (or merged in) instead of the user's copy, org_identity
     // would fail. Success here is only possible if the user's tree wins.
     const userTree: FileTree = new Map([[`keys/${orgId}/${orgKeyId}.pub`, orgPublicKey]]);
-    const effectiveTree = resolveTransparencyTree(userTree, embeddedTree);
+    const effectiveTree = resolveTransparencyTree(userTree, null, embeddedTree);
     expect(effectiveTree).toBe(userTree);
 
     const { result } = await withNetworkBlocked(() =>
@@ -56,11 +57,31 @@ describe('verification against the embedded transparency registry', () => {
     const { result: withoutUserCopy } = await withNetworkBlocked(() =>
       verifyPackageFiles(packageTree, {
         packagePath: '(test package)',
-        transparencyFiles: resolveTransparencyTree(null, embeddedTree),
+        transparencyFiles: resolveTransparencyTree(null, null, embeddedTree),
       }),
     );
     const orgIdentityWithoutUserCopy = withoutUserCopy.checks.find((check) => check.id === 'org_identity');
     expect(orgIdentityWithoutUserCopy?.status).not.toBe('ok');
+  });
+
+  it('a locally-updated registry (desktop) prevails over the embedded one, but a user-provided copy still prevails over both', async () => {
+    const { packageTree, orgId, orgKeyId, orgPublicKey } = await buildPackageForUnknownOrg();
+    const embeddedTree = buildEmbeddedTransparencyTree();
+    const updatedTree: FileTree = new Map([[`keys/${orgId}/${orgKeyId}.pub`, orgPublicKey]]);
+
+    // No custom tree: the "updated" tier wins over embedded.
+    expect(resolveTransparencyTree(null, updatedTree, embeddedTree)).toBe(updatedTree);
+    const { result: viaUpdated } = await withNetworkBlocked(() =>
+      verifyPackageFiles(packageTree, {
+        packagePath: '(test package)',
+        transparencyFiles: resolveTransparencyTree(null, updatedTree, embeddedTree),
+      }),
+    );
+    expect(viaUpdated.verdict).toBe('authentic');
+
+    // A user-provided copy still wins even when an "updated" tier exists.
+    const customTree: FileTree = new Map();
+    expect(resolveTransparencyTree(customTree, updatedTree, embeddedTree)).toBe(customTree);
   });
 });
 

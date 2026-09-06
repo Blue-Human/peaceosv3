@@ -1,0 +1,227 @@
+name: Desktop build
+
+# Validates the Tauri desktop shell on all three target OSes, using runners
+# that already carry the Rust + platform toolchains this repo's own dev
+# machine may not have:
+#   - Phase A: compiles and starts on Windows/macOS/Linux.
+#   - Phase B: the "update organizations" action — Rust tests exercise
+#     fetch/validate/persist against the REAL canonical registry and against
+#     deliberately tampered snapshots. A Windows-only, non-blocking step
+#     also attempts to drive the actual compiled app's UI end to end (see
+#     its own comment below for why it's non-blocking).
+#   - Distribution: every run hashes each installer (SHA-256, written as a
+#     sibling <file>.sha256 next to it, so it rides along in the artifact).
+#     Pushing a "v*" tag additionally publishes a GitHub Release with all
+#     three installers and their checksums attached — see the `release`
+#     job below. No code signing, no signing credentials: see
+#     desktop/README.md for what that means for people downloading a build.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: Install Linux Tauri build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf build-essential curl wget file libssl-dev libgtk-3-dev xvfb
+
+      - run: pnpm install --frozen-lockfile
+
+      # @peaceos/web imports @peaceos/core via its package.json "exports",
+      # which point at core/dist — so core (and spec, which core depends on)
+      # must be built before web's build runs. The root `build` script does
+      # exactly that, in the right order (spec -> core -> cli -> examples ->
+      # web); Tauri's own beforeBuildCommand then rebuilds web again, which
+      # is redundant but harmless.
+      - run: pnpm run build
+
+      # Phase B: fetch/validate/persist logic, including one test that hits
+      # the REAL Blue-Human/peaceos_organizations repo over HTTPS (GitHub
+      # Actions runners have network access) and several that feed it
+      # deliberately tampered snapshots and assert they are rejected without
+      # touching the previously-persisted copy. GITHUB_TOKEN authenticates
+      # just that test's api.github.com calls (5000/hour instead of the
+      # unauthenticated 60/hour that GitHub-hosted runners' shared IP ranges
+      # can otherwise exhaust) — see with_optional_auth in registry_update.rs;
+      # real end users never have this env var set, so production behavior
+      # (always unauthenticated) is unaffected.
+      - name: Run desktop Rust tests
+        working-directory: desktop/src-tauri
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cargo test
+
+      - name: Build desktop app
+        run: pnpm --filter @peaceos/desktop run build
+
+      # Distribution: a SHA-256 for every installer, written as a sibling
+      # <file>.sha256 (the plain "<hex-digest>  <filename>" format
+      # sha256sum/shasum -c reads directly), so anyone downloading a build —
+      # from this run's artifact or, for a tagged push, from the GitHub
+      # Release below — can verify it wasn't corrupted or tampered with in
+      # transit. See desktop/README.md for how to check one.
+      - name: Generate installer checksums
+        run: node desktop/ci/checksum-bundles.mjs desktop/src-tauri/target/release/bundle
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.os }}
+          path: desktop/src-tauri/target/release/bundle
+
+      # "Debe arrancar... sin red": launches the raw compiled binary (not an
+      # installer) and confirms the process is still alive a few seconds
+      # later, i.e. it didn't crash on startup. This does not exercise the
+      # UI — see web-test.yml / web/test for the automated proof that the
+      # exact same web/dist this shell displays verifies valid.vep as
+      # AUTHENTIC using only the embedded registry, with zero network calls.
+      - name: Smoke-launch the desktop binary (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $proc = Start-Process -FilePath "desktop/src-tauri/target/release/peaceos-verify-desktop.exe" -PassThru
+          Start-Sleep -Seconds 5
+          if ($proc.HasExited) {
+            Write-Error "Desktop app exited early (code $($proc.ExitCode)) instead of staying open."
+            exit 1
+          }
+          Stop-Process -Id $proc.Id -Force
+
+      # The Rust tests above prove fetch/validate/persist works for real
+      # (including against the actual canonical registry); this step's
+      # intent is to also prove the frontend button reaches that Rust
+      # command through Tauri's IPC/capability layer in the real compiled
+      # app, via WebView2's remote-debugging hook + Playwright over CDP
+      # (installed ephemerally here, not a project dependency — see
+      # desktop/ci/package.json).
+      #
+      # continue-on-error: after fixing two real, documented WebView2 CI
+      # gotchas (the debug port only binds 127.0.0.1, and a WebView2
+      # environment already initialized by an earlier launch of the same
+      # exe silently ignores a newly-set WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
+      # unless WEBVIEW2_USER_DATA_FOLDER also changes), the debug port still
+      # never opens on windows-latest GitHub-hosted runners specifically —
+      # likely something about how WebView2 initializes without an
+      # interactive desktop session there. Left in (and still exercised) as
+      # a diagnostic in case a future runner/WebView2 update fixes it, but
+      # it must not block CI: the ACL wiring it would exercise is already
+      # validated at build time (tauri-build's validate_capabilities fails
+      # the *build itself* if the capability/permission names in
+      # capabilities/default.json don't match what build.rs registers via
+      # AppManifest::commands(...) — and the build passes on all three OSes).
+      - name: Verify "Update organizations" end-to-end (Windows, real network)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        working-directory: desktop/ci
+        continue-on-error: true
+        run: |
+          npm install
+          node verify-update.mjs "../../desktop/src-tauri/target/release/peaceos-verify-desktop.exe" "../../examples/packages/valid.vep"
+
+      - name: Smoke-launch the desktop binary (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          ./desktop/src-tauri/target/release/peaceos-verify-desktop &
+          pid=$!
+          sleep 5
+          if ! kill -0 "$pid" 2>/dev/null; then
+            echo "Desktop app exited early instead of staying open." >&2
+            exit 1
+          fi
+          kill "$pid"
+
+      - name: Smoke-launch the desktop binary (Linux, headless via Xvfb)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          xvfb-run --auto-servernum ./desktop/src-tauri/target/release/peaceos-verify-desktop &
+          pid=$!
+          sleep 5
+          if ! kill -0 "$pid" 2>/dev/null; then
+            echo "Desktop app exited early instead of staying open." >&2
+            exit 1
+          fi
+          kill "$pid"
+
+  # Only on a "v*" tag push, and only after all three OSes above have built
+  # successfully: gathers the three installers (with their .sha256 files
+  # already sitting next to them from the build job) and publishes them as
+  # assets on a GitHub Release for that tag. No code signing here and no
+  # signing credentials configured — see desktop/README.md.
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: dist
+          merge-multiple: true
+
+      - name: List release assets
+        run: find dist -type f \( -iname '*.exe' -o -iname '*.msi' -o -iname '*.dmg' -o -iname '*.deb' -o -iname '*.rpm' -o -iname '*.appimage' -o -iname '*.sha256' \) | sort
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          # Left as a draft on purpose: the pipeline proves it CAN produce a
+          # complete, checksummed release automatically, but a human still
+          # reviews and publishes it — these binaries are unsigned (see
+          # desktop/README.md), so a deliberate publish step matters more
+          # than for a routine, pre-vetted release.
+          draft: true
+          generate_release_notes: true
+          # Tauri's own bundle output directory isn't just the installers —
+          # it also contains the full unpacked staging tree each installer
+          # was built from (AppImage's AppDir, the .deb's root, etc.), which
+          # is riddled with same-named files (multiple copies of the same
+          # shared libraries, icons, "copyright" files...) across those
+          # staging trees. A bare `dist/**/*` picked up hundreds of them and
+          # broke on the resulting name collisions. Scope strictly to the
+          # actual installer formats (+ the .sha256 checksums generated
+          # above) — nothing else in the bundle directory is a real,
+          # user-facing release asset.
+          files: |
+            dist/**/*.exe
+            dist/**/*.exe.sha256
+            dist/**/*.msi
+            dist/**/*.msi.sha256
+            dist/**/*.dmg
+            dist/**/*.dmg.sha256
+            dist/**/*.deb
+            dist/**/*.deb.sha256
+            dist/**/*.rpm
+            dist/**/*.rpm.sha256
+            dist/**/*.AppImage
+            dist/**/*.AppImage.sha256
