@@ -70,9 +70,16 @@ jobs:
       # the REAL Blue-Human/peaceos_organizations repo over HTTPS (GitHub
       # Actions runners have network access) and several that feed it
       # deliberately tampered snapshots and assert they are rejected without
-      # touching the previously-persisted copy.
+      # touching the previously-persisted copy. GITHUB_TOKEN authenticates
+      # just that test's api.github.com calls (5000/hour instead of the
+      # unauthenticated 60/hour that GitHub-hosted runners' shared IP ranges
+      # can otherwise exhaust) — see with_optional_auth in registry_update.rs;
+      # real end users never have this env var set, so production behavior
+      # (always unauthenticated) is unaffected.
       - name: Run desktop Rust tests
         working-directory: desktop/src-tauri
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: cargo test
 
       - name: Build desktop app

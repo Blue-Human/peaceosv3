@@ -261,14 +261,32 @@ fn agent() -> ureq::Agent {
         .build()
 }
 
+/// Adds `Authorization` when a `GITHUB_TOKEN` env var is present, to use
+/// GitHub's much higher authenticated API rate limit instead of the 60/hour
+/// unauthenticated one. Real end users never have this variable set — it's
+/// a CI-only convenience (desktop-build.yml's test job sets it from the
+/// automatically-provided secrets.GITHUB_TOKEN, since this project's own
+/// CI shares IP ranges with countless unrelated GitHub Actions workflows
+/// and can otherwise get rate-limited testing against the real registry).
+/// The source repo/path stay hard-coded either way — this only changes
+/// which quota a request counts against, never what it fetches.
+fn with_optional_auth(request: ureq::Request) -> ureq::Request {
+    match std::env::var("GITHUB_TOKEN") {
+        Ok(token) if !token.is_empty() => request.set("Authorization", &format!("Bearer {token}")),
+        _ => request,
+    }
+}
+
 fn fetch_commit_info(agent: &ureq::Agent) -> Result<(String, String), String> {
     let url = format!("{API_BASE}/repos/{REGISTRY_OWNER}/{REGISTRY_REPO}/commits/{REGISTRY_REF}");
-    let response = agent
-        .get(&url)
-        .set("User-Agent", USER_AGENT)
-        .set("Accept", "application/vnd.github+json")
-        .call()
-        .map_err(|e| format!("could not reach the organizations registry: {e}"))?;
+    let response = with_optional_auth(
+        agent
+            .get(&url)
+            .set("User-Agent", USER_AGENT)
+            .set("Accept", "application/vnd.github+json"),
+    )
+    .call()
+    .map_err(|e| format!("could not reach the organizations registry: {e}"))?;
     let parsed: CommitResponse = response
         .into_json()
         .map_err(|e| format!("unexpected response resolving the latest registry commit: {e}"))?;
@@ -277,12 +295,14 @@ fn fetch_commit_info(agent: &ureq::Agent) -> Result<(String, String), String> {
 
 fn fetch_tree(agent: &ureq::Agent, commit_sha: &str) -> Result<Vec<String>, String> {
     let url = format!("{API_BASE}/repos/{REGISTRY_OWNER}/{REGISTRY_REPO}/git/trees/{commit_sha}?recursive=1");
-    let response = agent
-        .get(&url)
-        .set("User-Agent", USER_AGENT)
-        .set("Accept", "application/vnd.github+json")
-        .call()
-        .map_err(|e| format!("could not list the organizations registry contents: {e}"))?;
+    let response = with_optional_auth(
+        agent
+            .get(&url)
+            .set("User-Agent", USER_AGENT)
+            .set("Accept", "application/vnd.github+json"),
+    )
+    .call()
+    .map_err(|e| format!("could not list the organizations registry contents: {e}"))?;
     let parsed: TreeResponse = response
         .into_json()
         .map_err(|e| format!("unexpected response listing the registry contents: {e}"))?;

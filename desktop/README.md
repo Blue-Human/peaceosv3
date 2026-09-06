@@ -155,6 +155,14 @@ never touches a previously-good local copy; and one test that calls
 `download_registry_snapshot()` for real against
 `Blue-Human/peaceos_organizations` over HTTPS (this one needs network
 access — it's what CI's `desktop-build.yml` exercises on all three OSes).
+That last test retries a few times and, in CI, authenticates its
+api.github.com calls with `GITHUB_TOKEN` (`with_optional_auth` in
+`registry_update.rs`) to use GitHub's 5000/hour authenticated rate limit
+instead of the 60/hour unauthenticated one that GitHub-hosted runners'
+shared IP ranges can otherwise exhaust. Real end users never have that
+env var set, so the shipped app's requests are always unauthenticated —
+this only affects which rate-limit bucket a request counts against, never
+what it fetches.
 
 `cargo test` doesn't exercise Tauri's IPC/capability layer itself (there's
 no trivial way to construct a real `AppHandle` in a unit test). CI *attempts*
