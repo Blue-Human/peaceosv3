@@ -9,14 +9,17 @@ name: Desktop build
 #     deliberately tampered snapshots. A Windows-only, non-blocking step
 #     also attempts to drive the actual compiled app's UI end to end (see
 #     its own comment below for why it's non-blocking).
-#
-# Build-only: no code signing, no release publishing yet. The SHA-256 +
-# release-publishing step described in web/README.md's distribution docs
-# lands once that's approved.
+#   - Distribution: every run hashes each installer (SHA-256, written as a
+#     sibling <file>.sha256 next to it, so it rides along in the artifact).
+#     Pushing a "v*" tag additionally publishes a GitHub Release with all
+#     three installers and their checksums attached — see the `release`
+#     job below. No code signing, no signing credentials: see
+#     desktop/README.md for what that means for people downloading a build.
 
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch: {}
 
@@ -74,6 +77,15 @@ jobs:
 
       - name: Build desktop app
         run: pnpm --filter @peaceos/desktop run build
+
+      # Distribution: a SHA-256 for every installer, written as a sibling
+      # <file>.sha256 (the plain "<hex-digest>  <filename>" format
+      # sha256sum/shasum -c reads directly), so anyone downloading a build —
+      # from this run's artifact or, for a tagged push, from the GitHub
+      # Release below — can verify it wasn't corrupted or tampered with in
+      # transit. See desktop/README.md for how to check one.
+      - name: Generate installer checksums
+        run: node desktop/ci/checksum-bundles.mjs desktop/src-tauri/target/release/bundle
 
       - uses: actions/upload-artifact@v4
         with:
@@ -152,3 +164,35 @@ jobs:
             exit 1
           fi
           kill "$pid"
+
+  # Only on a "v*" tag push, and only after all three OSes above have built
+  # successfully: gathers the three installers (with their .sha256 files
+  # already sitting next to them from the build job) and publishes them as
+  # assets on a GitHub Release for that tag. No code signing here and no
+  # signing credentials configured — see desktop/README.md.
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: dist
+          merge-multiple: true
+
+      - name: List release assets
+        run: find dist -type f | sort
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          # Left as a draft on purpose: the pipeline proves it CAN produce a
+          # complete, checksummed release automatically, but a human still
+          # reviews and publishes it — these binaries are unsigned (see
+          # desktop/README.md), so a deliberate publish step matters more
+          # than for a routine, pre-vetted release.
+          draft: true
+          generate_release_notes: true
+          files: dist/**/*

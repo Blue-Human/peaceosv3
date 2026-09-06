@@ -183,6 +183,67 @@ registers via `AppManifest::commands(...)` — and the build passes on all
 three OSes, which is real (if indirect) confirmation that the two commands
 are correctly wired.
 
+## Distribution
+
+Every `desktop-build.yml` run — not just tagged releases — hashes each
+installer it produces (SHA-256) and writes the digest as a sibling
+`<file>.sha256`, via [`desktop/ci/checksum-bundles.mjs`](./ci/checksum-bundles.mjs).
+Pushing a tag matching `v*` (e.g. `v0.1.0`) additionally runs the workflow's
+`release` job, which collects the three installers from all three OSes and
+publishes them — checksums included — as assets on a **draft** GitHub
+Release for that tag. A maintainer still reviews and publishes it manually;
+nothing auto-publishes.
+
+| Platform | What you get | Typical filename |
+| --- | --- | --- |
+| Windows | NSIS installer (`.exe`) and/or MSI (`.msi`) | `PeaceOS Verify_0.1.0_x64-setup.exe` |
+| macOS | Disk image (`.dmg`) | `PeaceOS Verify_0.1.0_x64.dmg` |
+| Linux | Debian package (`.deb`) and AppImage (`.AppImage`) | `peaceos-verify-desktop_0.1.0_amd64.AppImage` |
+
+Exact filenames depend on the version and architecture; check the release
+page or the CI artifact for the real names.
+
+### Verifying a download's integrity
+
+Each installer ships with a `<filename>.sha256` file next to it. Compare it
+against a hash you compute yourself from the file you downloaded:
+
+```powershell
+# Windows (PowerShell)
+Get-FileHash ".\PeaceOS Verify_0.1.0_x64-setup.exe" -Algorithm SHA256
+# compare the Hash value against the .sha256 file's contents
+```
+
+```bash
+# macOS
+shasum -a 256 -c "PeaceOS Verify_0.1.0_x64.dmg.sha256"
+
+# Linux
+sha256sum -c peaceos-verify-desktop_0.1.0_amd64.AppImage.sha256
+```
+
+A mismatch means the file was corrupted or tampered with in transit — do not
+run it; download it again from the official GitHub Release.
+
+### These binaries are not code-signed (yet)
+
+No code-signing certificate or credentials are configured in this pipeline
+yet — deliberately, for this phase. That means:
+
+- **Windows** will show a Microsoft Defender SmartScreen warning
+  ("Windows protected your PC" / unknown publisher) on first run. Proceeding
+  requires clicking **More info → Run anyway**.
+- **macOS** Gatekeeper will refuse to open the app as coming from an
+  "unidentified developer." Proceeding requires right-clicking the app and
+  choosing **Open** (or allowing it under **System Settings → Privacy &
+  Security**) instead of double-clicking it.
+
+Neither warning means the binary is corrupted — verifying the SHA-256 above
+is what actually confirms that. Code signing (which removes both warnings)
+is planned for a later phase, once signing certificates and secure credential
+storage are in place; this repo intentionally does not configure any signing
+secrets today.
+
 ## Icons
 
 Generated once from `web/public/images/Verify_POS_logo.png` via
