@@ -49,6 +49,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # @peaceos/web imports @peaceos/core via its package.json "exports",
+      # which point at core/dist — so core (and spec, which core depends on)
+      # must be built before web's build runs. The root `build` script does
+      # exactly that, in the right order (spec -> core -> cli -> examples ->
+      # web); Tauri's own beforeBuildCommand then rebuilds web again, which
+      # is redundant but harmless.
+      - run: pnpm run build
+
       - name: Build desktop app
         run: pnpm --filter @peaceos/desktop run build
 
