@@ -19,6 +19,7 @@
     "@mui/icons-material": "^9.4.0",
     "@mui/material": "^9.4.0",
     "@peaceos/core": "workspace:*",
+    "@tauri-apps/api": "^2.11.1",
     "country-flag-icons": "^1.6.20",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"

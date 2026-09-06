@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Phase A: only the core window/webview permissions needed to display the portal. No fs, http, or shell access — there is no capability that could reach the network or the filesystem from the frontend.",
+  "description": "Core window/webview permissions, plus our own two app-defined commands (registry_update.rs) — no fs, http, or shell plugin, so there is no general-purpose way to reach the network or filesystem from the frontend beyond those two narrow, hard-coded commands.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "allow-update-organizations-registry", "allow-load-local-registry-state"]
 }

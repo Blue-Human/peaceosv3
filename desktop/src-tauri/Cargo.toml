@@ -15,10 +15,16 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
-# No serde/serde_json yet: Phase A defines zero custom Tauri commands (the
-# window just displays @peaceos/web's build as-is). They'll be added in
-# Phase B alongside the "update organizations" command's return type.
 tauri = { version = "2.11.5", features = [] }
+# Phase B: the "update organizations" command. Pinned to the 2.x line
+# deliberately (not the newer 3.x, which changed its request/response API
+# significantly) — ureq's default features on 2.x (rustls + gzip) already
+# give HTTPS with pure-Rust TLS, no system OpenSSL dependency, which matters
+# for reproducible builds across the three OSes.
+ureq = { version = "2.12.1", features = ["json"] }
+sha2 = "0.11.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
 
 [profile.release]
 panic = "abort"

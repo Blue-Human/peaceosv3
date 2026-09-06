@@ -134,10 +134,27 @@ tooltip o icono de ayuda), y el texto del estado.
     - Ayuda: "Copia local del registro público para comprobar quién firma. Selecciona
       la carpeta completa."
     - Si ya hay una copia cargada, aviso: "Tu copia sustituye al registro incorporado
-      en esta verificación." y un enlace para deshacerlo: "Usar el registro
-      incorporado en su lugar".
+      en esta verificación." y un enlace para deshacerlo: "Usar el registro por
+      defecto en su lugar" (no dice "incorporado" a secas porque en el escritorio el
+      valor por defecto puede ser el registro actualizado, no el de fábrica).
   - Cuando el usuario ha cargado su copia, la línea de estado cambia a: "Usando tu
     copia cargada del registro (N archivos)".
+  - **Solo en la app de escritorio** (nunca en el portal web, que no tiene forma de
+    descargar nada): un botón "Actualizar organizaciones" justo debajo de la línea de
+    estado, visible siempre que no haya una copia propia cargada.
+    - Estado normal: "Actualizar organizaciones". Mientras se ejecuta:
+      "Actualizando…" (botón deshabilitado).
+    - Éxito: "Registro actualizado a la versión del {fecha} (commit {commit})." y la
+      línea de estado pasa a "Registro actualizado: foto del {fecha} (commit
+      {commit})".
+    - Fallo (registro manipulado, sin conexión, etc.): se muestra el motivo tal cual
+      lo devuelve la comprobación (fail closed — la copia anterior no se toca). No
+      hay un mensaje genérico que oculte la causa real.
+  - Aviso de antigüedad (en ambas plataformas, si el registro en uso —incorporado o
+    actualizado, nunca el propio, porque de ese no sabemos la fecha— tiene más de 4
+    semanas): "El registro en uso tiene más de {semanas} semanas. Considera
+    actualizarlo." En el portal web esto es solo informativo (no hay botón); en
+    escritorio invita a usar "Actualizar organizaciones".
 - Estados: "Sin seleccionar" / "X archivos cargados"
 - Botón: "Verificar evidencia"
 
